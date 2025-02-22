@@ -1,14 +1,17 @@
 package main
 
-/*
-#cgo pkg-config: gtk4
-#include "gtk_gui/app.c"
-*/
-import "C"
-import "fmt"
+import (
+	"fmt"
+	"github.com/matoval/airtHive/backend/llama"
+	"github.com/matoval/airtHive/backend/server"
+)
+
 
 func main() {
     fmt.Println("Calling gtk_gui application from Go...")
-    C.start(0, nil)
+    err := server.StartServer("localhost:50051", &llama.LLM{})
+    if err != nil {
+        panic(err)
+    }
 }
 
