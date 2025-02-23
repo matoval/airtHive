@@ -19,22 +19,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Backend_Health_FullMethodName        = "/Backend/Health"
-	Backend_LoadModel_FullMethodName     = "/Backend/LoadModel"
-	Backend_Predict_FullMethodName       = "/Backend/Predict"
-	Backend_PredictStream_FullMethodName = "/Backend/PredictStream"
-	Backend_Status_FullMethodName        = "/Backend/Status"
+	Backend_ChatStream_FullMethodName   = "/Backend/ChatStream"
+	Backend_StartBackend_FullMethodName = "/Backend/StartBackend"
 )
 
 // BackendClient is the client API for Backend service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type BackendClient interface {
-	Health(ctx context.Context, in *HealthMessage, opts ...grpc.CallOption) (*Reply, error)
-	LoadModel(ctx context.Context, in *ModelOptions, opts ...grpc.CallOption) (*Result, error)
-	Predict(ctx context.Context, in *PredictOptions, opts ...grpc.CallOption) (*Reply, error)
-	PredictStream(ctx context.Context, in *PredictOptions, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Reply], error)
-	Status(ctx context.Context, in *HealthMessage, opts ...grpc.CallOption) (*StatusResponse, error)
+	ChatStream(ctx context.Context, in *ChatOptions, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Reply], error)
+	StartBackend(ctx context.Context, in *BackendOptions, opts ...grpc.CallOption) (*BackendResponse, error)
 }
 
 type backendClient struct {
@@ -45,43 +39,13 @@ func NewBackendClient(cc grpc.ClientConnInterface) BackendClient {
 	return &backendClient{cc}
 }
 
-func (c *backendClient) Health(ctx context.Context, in *HealthMessage, opts ...grpc.CallOption) (*Reply, error) {
+func (c *backendClient) ChatStream(ctx context.Context, in *ChatOptions, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Reply], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Reply)
-	err := c.cc.Invoke(ctx, Backend_Health_FullMethodName, in, out, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &Backend_ServiceDesc.Streams[0], Backend_ChatStream_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
-}
-
-func (c *backendClient) LoadModel(ctx context.Context, in *ModelOptions, opts ...grpc.CallOption) (*Result, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Result)
-	err := c.cc.Invoke(ctx, Backend_LoadModel_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *backendClient) Predict(ctx context.Context, in *PredictOptions, opts ...grpc.CallOption) (*Reply, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Reply)
-	err := c.cc.Invoke(ctx, Backend_Predict_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *backendClient) PredictStream(ctx context.Context, in *PredictOptions, opts ...grpc.CallOption) (grpc.ServerStreamingClient[Reply], error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &Backend_ServiceDesc.Streams[0], Backend_PredictStream_FullMethodName, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	x := &grpc.GenericClientStream[PredictOptions, Reply]{ClientStream: stream}
+	x := &grpc.GenericClientStream[ChatOptions, Reply]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -92,12 +56,12 @@ func (c *backendClient) PredictStream(ctx context.Context, in *PredictOptions, o
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Backend_PredictStreamClient = grpc.ServerStreamingClient[Reply]
+type Backend_ChatStreamClient = grpc.ServerStreamingClient[Reply]
 
-func (c *backendClient) Status(ctx context.Context, in *HealthMessage, opts ...grpc.CallOption) (*StatusResponse, error) {
+func (c *backendClient) StartBackend(ctx context.Context, in *BackendOptions, opts ...grpc.CallOption) (*BackendResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(StatusResponse)
-	err := c.cc.Invoke(ctx, Backend_Status_FullMethodName, in, out, cOpts...)
+	out := new(BackendResponse)
+	err := c.cc.Invoke(ctx, Backend_StartBackend_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -108,11 +72,8 @@ func (c *backendClient) Status(ctx context.Context, in *HealthMessage, opts ...g
 // All implementations must embed UnimplementedBackendServer
 // for forward compatibility.
 type BackendServer interface {
-	Health(context.Context, *HealthMessage) (*Reply, error)
-	LoadModel(context.Context, *ModelOptions) (*Result, error)
-	Predict(context.Context, *PredictOptions) (*Reply, error)
-	PredictStream(*PredictOptions, grpc.ServerStreamingServer[Reply]) error
-	Status(context.Context, *HealthMessage) (*StatusResponse, error)
+	ChatStream(*ChatOptions, grpc.ServerStreamingServer[Reply]) error
+	StartBackend(context.Context, *BackendOptions) (*BackendResponse, error)
 	mustEmbedUnimplementedBackendServer()
 }
 
@@ -123,20 +84,11 @@ type BackendServer interface {
 // pointer dereference when methods are called.
 type UnimplementedBackendServer struct{}
 
-func (UnimplementedBackendServer) Health(context.Context, *HealthMessage) (*Reply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Health not implemented")
+func (UnimplementedBackendServer) ChatStream(*ChatOptions, grpc.ServerStreamingServer[Reply]) error {
+	return status.Errorf(codes.Unimplemented, "method ChatStream not implemented")
 }
-func (UnimplementedBackendServer) LoadModel(context.Context, *ModelOptions) (*Result, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method LoadModel not implemented")
-}
-func (UnimplementedBackendServer) Predict(context.Context, *PredictOptions) (*Reply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Predict not implemented")
-}
-func (UnimplementedBackendServer) PredictStream(*PredictOptions, grpc.ServerStreamingServer[Reply]) error {
-	return status.Errorf(codes.Unimplemented, "method PredictStream not implemented")
-}
-func (UnimplementedBackendServer) Status(context.Context, *HealthMessage) (*StatusResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Status not implemented")
+func (UnimplementedBackendServer) StartBackend(context.Context, *BackendOptions) (*BackendResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartBackend not implemented")
 }
 func (UnimplementedBackendServer) mustEmbedUnimplementedBackendServer() {}
 func (UnimplementedBackendServer) testEmbeddedByValue()                 {}
@@ -159,85 +111,31 @@ func RegisterBackendServer(s grpc.ServiceRegistrar, srv BackendServer) {
 	s.RegisterService(&Backend_ServiceDesc, srv)
 }
 
-func _Backend_Health_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HealthMessage)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BackendServer).Health(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Backend_Health_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BackendServer).Health(ctx, req.(*HealthMessage))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Backend_LoadModel_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ModelOptions)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BackendServer).LoadModel(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Backend_LoadModel_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BackendServer).LoadModel(ctx, req.(*ModelOptions))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Backend_Predict_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PredictOptions)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(BackendServer).Predict(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Backend_Predict_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BackendServer).Predict(ctx, req.(*PredictOptions))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Backend_PredictStream_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(PredictOptions)
+func _Backend_ChatStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ChatOptions)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(BackendServer).PredictStream(m, &grpc.GenericServerStream[PredictOptions, Reply]{ServerStream: stream})
+	return srv.(BackendServer).ChatStream(m, &grpc.GenericServerStream[ChatOptions, Reply]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Backend_PredictStreamServer = grpc.ServerStreamingServer[Reply]
+type Backend_ChatStreamServer = grpc.ServerStreamingServer[Reply]
 
-func _Backend_Status_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HealthMessage)
+func _Backend_StartBackend_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(BackendOptions)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(BackendServer).Status(ctx, in)
+		return srv.(BackendServer).StartBackend(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Backend_Status_FullMethodName,
+		FullMethod: Backend_StartBackend_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(BackendServer).Status(ctx, req.(*HealthMessage))
+		return srv.(BackendServer).StartBackend(ctx, req.(*BackendOptions))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -250,26 +148,14 @@ var Backend_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*BackendServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Health",
-			Handler:    _Backend_Health_Handler,
-		},
-		{
-			MethodName: "LoadModel",
-			Handler:    _Backend_LoadModel_Handler,
-		},
-		{
-			MethodName: "Predict",
-			Handler:    _Backend_Predict_Handler,
-		},
-		{
-			MethodName: "Status",
-			Handler:    _Backend_Status_Handler,
+			MethodName: "StartBackend",
+			Handler:    _Backend_StartBackend_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "PredictStream",
-			Handler:       _Backend_PredictStream_Handler,
+			StreamName:    "ChatStream",
+			Handler:       _Backend_ChatStream_Handler,
 			ServerStreams: true,
 		},
 	},

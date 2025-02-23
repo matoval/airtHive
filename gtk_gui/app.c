@@ -12,7 +12,7 @@ static void activate (GtkApplication *app, gpointer        user_data) {
   gtk_grid_get_row_spacing(GTK_GRID(grid));
 
   GtkWidget *button1 = gtk_button_new_with_label ("Chat");
-  GtkWidget *button2 = gtk_button_new_with_label ("Server");
+  GtkWidget *button2 = gtk_button_new_with_label ("Backends");
 
   gtk_grid_attach(GTK_GRID(grid), button1, 0,0,1,1);
   gtk_grid_attach(GTK_GRID(grid), button2, 1,0,1,1);
