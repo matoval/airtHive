@@ -15,10 +15,9 @@ func StartServer() error {
 	}
 
 	s := grpc.NewServer()
+
 	newHive := NewAirtHive()
-	if err != nil {
-		return err
-	}
+	
 	pb.RegisterBackendServer(s, newHive)
 	log.Printf("gRPC server listening at %v", listen.Addr())
 	if err = s.Serve(listen); err != nil {
